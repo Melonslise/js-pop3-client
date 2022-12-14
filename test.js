@@ -1,36 +1,45 @@
 const POP3Client = require("./client");
 
-const ReadLine = require("readline");
+const ReadLine = require("readline/promises");
 
 
 
 const prompter = ReadLine.createInterface({ input: process.stdin, output: process.stdout });
 
-function ask(query)
-{
-	return new Promise(resolve => prompter.question(query, resolve));
-}
-
-function delay(time)
-{
-	return new Promise(resolve => setTimeout(resolve, time));
-}
 
 
+let client;
 
 async function run()
 {
-	const [ host, port ] = (await ask("Enter host and port (e.g. pop.gmail.com:995): ")).split(":");
+	const [ host, port ] = (await prompter.question("Enter host and port (e.g. pop.yandex.com:995): ")).split(":");
+	const tlsEnabled = await prompter.question("Enable TLS/SSL? (y/n) ") === "y";
 
-	const client = new POP3Client();
+	client = new POP3Client();
 
-	console.log("connected: ", await client.connect(host, port));
+	console.log("connected:", await client.connect(host, port, tlsEnabled));
 
-	await delay(5000);
+	const username = await prompter.question("Enter email address: ");
+	console.log("user:", await client.user(username));
 
-	console.log("closed connection: ", await client.quit());
+	const password = await prompter.question("Enter password: ");
+	console.log("pass:", await client.pass(password));
 
-	prompter.close();
+	console.log("Statistics:", await client.stats());
+
+	console.log("Listing 1:", await client.listing(1)); 
+
+	console.log("All listings:", await client.listing());
+
+	console.log("Email 1:", await client.retrieve(1));
+
+	console.log("closed connection:", await client.quit());
 }
 
-run();
+run()
+.catch(console.log)
+.finally(() =>
+{
+	client.close();
+	prompter.close();
+});
