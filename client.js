@@ -53,11 +53,6 @@ class MessageHandler
 	{
 		this.handlerQueue.push({ resolve, reject, multiline, data: [] });
 	}
-
-	close()
-	{
-		this.socket.destroy();
-	}
 }
 
 
@@ -124,5 +119,13 @@ module.exports = class POP3Client
 	quit()
 	{
 		return this._send("QUIT");
+	}
+
+	close()
+	{
+		if(this.socket)
+		{
+			this.socket.destroy();
+		}
 	}
 }
