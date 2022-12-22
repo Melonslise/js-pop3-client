@@ -33,11 +33,16 @@ class MessageHandler
 			return;
 		}
 
-		handler.data.push(line);
+		handler.data.push(line === ".." ? "." : line);
 
-		if(handler.multiline && line !== ".")
+		if(handler.multiline)
 		{
-			return;
+			if(line !== ".")
+			{
+				return;
+			}
+
+			handler.data.pop();
 		}
 
 		this.handlerQueue.shift();
@@ -72,7 +77,7 @@ module.exports = class POP3Client
 		});
 	}
 
-	_send(cmd, multilineResponse = false)
+	_send(args, multilineResponse)
 	{
 		return new Promise((resolve, reject) =>
 		{
@@ -81,44 +86,59 @@ module.exports = class POP3Client
 				return reject("Socket closed");
 			}
 
-			this.socket.write(cmd + "\r\n");
+			this.socket.write(args.join(" ") + "\r\n");
 			this.handler.onNext(resolve, reject, multilineResponse);
 		});
 	}
 
+	_sendSingle(...args)
+	{
+		return this._send(args, false);
+	}
+
+	_sendMulti(...args)
+	{
+		return this._send(args, true);
+	}
+
 	user(username)
 	{
-		return this._send("USER " + username);
+		return this._sendSingle("USER", username);
 	}
 
 	pass(password)
 	{
-		return this._send("PASS " + password);
+		return this._sendSingle("PASS", password);
 	}
 
 	stats()
 	{
-		return this._send("STAT");
+		return this._sendSingle("STAT");
 	}
 
 	listing(index)
 	{
 		if(index)
 		{
-			return this._send("LIST " + index);
+			return this._sendSingle("LIST", index);
 		}
 	
-		return this._send("LIST", true);
+		return this._sendMulti("LIST");
 	}
 
 	retrieve(index)
 	{
-		return this._send("RETR " + index, true);
+		return this._sendMulti("RETR", index);
+	}
+
+	delete(index)
+	{
+		return this._sendSingle("DELE", index);
 	}
 
 	quit()
 	{
-		return this._send("QUIT");
+		return this._sendSingle("QUIT");
 	}
 
 	close()

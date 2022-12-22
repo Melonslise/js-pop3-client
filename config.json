@@ -1,0 +1,11 @@
+{
+	"host": "pop.yandex.com",
+	"port": "995",
+	"tls": true,
+	
+	"username": "name",
+	"password": "pass",
+	
+	"emailNumber": "1",
+	"emailFilePath": "content.txt"
+}

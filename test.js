@@ -1,45 +1,34 @@
+const FS = require("fs");
 const POP3Client = require("./client");
-
-const ReadLine = require("readline/promises");
-
+const Config = require("./config.json");
 
 
-const prompter = ReadLine.createInterface({ input: process.stdin, output: process.stdout });
 
+function handle(response)
+{
+	if(!response.ok)
+	{
+		throw response.info;
+	}
 
+	return response.info;
+}
 
 let client;
 
 async function run()
 {
-	const [ host, port ] = (await prompter.question("Enter host and port (e.g. pop.yandex.com:995): ")).split(":");
-	const tlsEnabled = await prompter.question("Enable TLS/SSL? (y/n) ") === "y";
-
 	client = new POP3Client();
 
-	console.log("connected:", await client.connect(host, port, tlsEnabled));
+	handle(await client.connect(Config.host, Config.port, Config.tls));
+	handle(await client.user(Config.username));
+	handle(await client.pass(Config.password));
+	const data = handle(await client.retrieve(Config.emailNumber));
+	FS.writeFileSync(Config.emailFilePath, data.substring(data.indexOf("\r\n") + 2));
+	handle(await client.delete(Config.emailNumber));
+	handle(await client.quit());
 
-	const username = await prompter.question("Enter email address: ");
-	console.log("user:", await client.user(username));
-
-	const password = await prompter.question("Enter password: ");
-	console.log("pass:", await client.pass(password));
-
-	console.log("Statistics:", await client.stats());
-
-	console.log("Listing 1:", await client.listing(1)); 
-
-	console.log("All listings:", await client.listing());
-
-	console.log("Email 1:", await client.retrieve(1));
-
-	console.log("closed connection:", await client.quit());
+	console.log("Email retrieved and deleted!");
 }
 
-run()
-.catch(console.log)
-.finally(() =>
-{
-	client.close();
-	prompter.close();
-});
+run().catch(error => console.log("Error:", error)).finally(client.close.bind(client));
