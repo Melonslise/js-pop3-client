@@ -4,6 +4,7 @@ const MessageReader = require("./message-reader");
 
 
 
+// обработчик сообщений
 class MessageHandler
 {
 	constructor(socket, reader)
@@ -15,6 +16,7 @@ class MessageHandler
 		reader.on("message", this._handleLine.bind(this));
 	}
 
+	// получает массив строк ответа и извлекает из них статус код (OK или ERR) и кладет в простой объект
 	_parseMessage(data)
 	{
 		return {
@@ -23,6 +25,7 @@ class MessageHandler
 		};
 	}
 
+	// каждый раз когда прихожит строка
 	_handleLine(line)
 	{
 		const handler = this.handlerQueue[0];
@@ -33,8 +36,10 @@ class MessageHandler
 			return;
 		}
 
+		// если она состоит .. то удаляем одну точку - .
 		handler.data.push(line === ".." ? "." : line);
 
+		// если прошлая команда ожидает многострочный ответ, то накапливаем строчки пока не придет .
 		if(handler.multiline)
 		{
 			if(line !== ".")
@@ -45,6 +50,7 @@ class MessageHandler
 			handler.data.pop();
 		}
 
+		// передаем ответ ожидающей функции
 		this.handlerQueue.shift();
 		handler.resolve(this._parseMessage(handler.data));
 	}
@@ -68,15 +74,18 @@ module.exports = class POP3Client
 	{
 		return new Promise((resolve, reject) =>
 		{
+			// иницилизируем клиент, создаем сокет, парсер потока, и прикрепляем парсер к сокету
 			const reader = new MessageReader();
 			this.socket = (tlsEnabled ? TLS : NET).connect({ port, host, servername: host });
 			this.socket.on("data", reader.pipe.bind(reader));
 
+			// также создаем обработчик сообщений и прикрепляем его к парсеру
 			this.handler = new MessageHandler(this.socket, reader);
 			this.handler.onNext(resolve, reject);
 		});
 	}
 
+	// отправляем команду и ждем ответа - либо однострочный, либо многострочный
 	_send(args, multilineResponse)
 	{
 		return new Promise((resolve, reject) =>
@@ -100,6 +109,10 @@ module.exports = class POP3Client
 	{
 		return this._send(args, true);
 	}
+
+	/*
+	Далее следуют функции для отдельных команд для простоты
+	*/
 
 	user(username)
 	{

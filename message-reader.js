@@ -1,5 +1,6 @@
 const EventEmitter = require("events");
 
+// парсер потока данных от сервера
 module.exports = class MessageReader extends EventEmitter
 {
 	constructor(delimiter = "\r\n")
@@ -24,9 +25,12 @@ module.exports = class MessageReader extends EventEmitter
 		}
 	}
 
+	// принимает кусочки данных от сервера
 	pipe(dataChunk)
 	{
+		// накапливает их
 		this._accumulatedData = Buffer.concat([ this._accumulatedData, dataChunk ]);
+		// ищет и достает из буфера строчки
 		this._read();
 	}
 }
